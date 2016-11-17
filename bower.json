@@ -1,0 +1,17 @@
+{
+  "name": "angular-search",
+  "authors": [
+    "Sanchit <dev@minutephp.com>"
+  ],
+  "description": "json based site search",
+  "main": "",
+  "license": "MIT",
+  "homepage": "",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ]
+}
