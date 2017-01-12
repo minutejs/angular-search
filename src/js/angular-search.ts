@@ -24,7 +24,7 @@ module Minute {
                     if (results && results.length > 2) {
                         deferred.resolve(results);
                     } else if (youtube === true) { //return normal suggest results if youtube doesn't return anything
-                        var promise = suggest(query, false);
+                        let promise = suggest(query, false);
                         promise.then((results) => deferred.resolve(results));
                     } else {
                         deferred.resolve([]);
@@ -57,7 +57,7 @@ module Minute {
             service.wikiSearch = (query, len = 0) => {
                 let deferred = $q.defer();
                 let cancel = $timeout(() => deferred.resolve(''), 5000);
-                let ucQuery = (query || '').replace(/\b\w/g, l => l.toUpperCase());
+                let ucQuery = Minute.Utils.ucFirst(query);
 
                 $http.jsonp('//en.wikipedia.org/w/api.php?format=json&action=query&prop=extracts&exintro=&explaintext=&titles=' + encodeURIComponent(ucQuery) + '&callback=JSON_CALLBACK').then((obj: any) => {
                     $timeout.cancel(cancel);

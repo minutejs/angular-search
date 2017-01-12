@@ -47,7 +47,7 @@ var Minute;
                     if (len === void 0) { len = 0; }
                     var deferred = $q.defer();
                     var cancel = $timeout(function () { return deferred.resolve(''); }, 5000);
-                    var ucQuery = (query || '').replace(/\b\w/g, function (l) { return l.toUpperCase(); });
+                    var ucQuery = Minute.Utils.ucFirst(query);
                     $http.jsonp('//en.wikipedia.org/w/api.php?format=json&action=query&prop=extracts&exintro=&explaintext=&titles=' + encodeURIComponent(ucQuery) + '&callback=JSON_CALLBACK').then(function (obj) {
                         $timeout.cancel(cancel);
                         for (var page in obj.data.query.pages) {
