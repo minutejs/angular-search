@@ -3,11 +3,12 @@
 module Minute {
     export class AngularSearch implements ng.IServiceProvider {
         constructor() {
-            this.$get.$inject = ['$rootScope', '$q', '$timeout', '$http'];
+            this.$get.$inject = ['$rootScope', '$q', '$timeout', '$http', '$sce'];
         }
 
-        $get = ($rootScope: ng.IRootScopeService, $q: ng.IQService, $timeout: ng.ITimeoutService, $http: ng.IHttpService) => {
+        $get = ($rootScope: ng.IRootScopeService, $q: ng.IQService, $timeout: ng.ITimeoutService, $http: ng.IHttpService, $sce: ng.ISCEService) => {
             let service: any = {};
+
             let suggest = (query, youtube) => {
                 let deferred = $q.defer();
                 let cancel = $timeout(() => deferred.resolve([]), 2500);
@@ -149,6 +150,15 @@ module Minute {
     }
 
     angular.module('AngularSearch', [])
+        .config(function ($sceDelegateProvider) {
+            $sceDelegateProvider.resourceUrlWhitelist([
+                // Allow same origin resource loads.
+                'self',
+                // Allow loading from our assets domain. **.
+                '//suggestqueries.google.com/!**',
+                '//www.stockutils.com//!**',
+                '//en.wikipedia.org/!**'
+            ])
+        })
         .provider("$search", AngularSearch);
-
 }

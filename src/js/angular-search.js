@@ -3,7 +3,7 @@ var Minute;
 (function (Minute) {
     var AngularSearch = (function () {
         function AngularSearch() {
-            this.$get = function ($rootScope, $q, $timeout, $http) {
+            this.$get = function ($rootScope, $q, $timeout, $http, $sce) {
                 var service = {};
                 var suggest = function (query, youtube) {
                     var deferred = $q.defer();
@@ -123,11 +123,21 @@ var Minute;
                 };
                 return service.init();
             };
-            this.$get.$inject = ['$rootScope', '$q', '$timeout', '$http'];
+            this.$get.$inject = ['$rootScope', '$q', '$timeout', '$http', '$sce'];
         }
         return AngularSearch;
     }());
     Minute.AngularSearch = AngularSearch;
     angular.module('AngularSearch', [])
+        .config(function ($sceDelegateProvider) {
+        $sceDelegateProvider.resourceUrlWhitelist([
+            // Allow same origin resource loads.
+            'self',
+            // Allow loading from our assets domain. **.
+            '//suggestqueries.google.com/!**',
+            '//www.stockutils.com//!**',
+            '//en.wikipedia.org/!**'
+        ]);
+    })
         .provider("$search", AngularSearch);
 })(Minute || (Minute = {}));
