@@ -3,17 +3,30 @@ var Minute;
 (function (Minute) {
     var AngularSearch = (function () {
         function AngularSearch() {
-            this.$get = function ($rootScope, $q, $timeout, $http, $sce) {
+            this.$get = function ($rootScope, $q, $timeout, $http) {
                 var service = {};
-                var suggest = function (query, youtube) {
+                var jsonp = function (url, timeout) {
+                    if (timeout === void 0) { timeout = 2500; }
                     var deferred = $q.defer();
                     var cancel = $timeout(function () { return deferred.resolve([]); }, 2500);
+                    $.ajax({
+                        url: url + (/\?/.test(url) ? '&' : '?') + 'callback=?',
+                        dataType: 'jsonp',
+                        success: function (data) {
+                            $timeout.cancel(cancel);
+                            $timeout(function () { return 1; }, 1);
+                            deferred.resolve(data);
+                        }
+                    });
+                    return deferred.promise;
+                };
+                var suggest = function (query, youtube) {
+                    var deferred = $q.defer();
                     var apiKey = 'AI39si7ZLU83bKtKd4MrdzqcjTVI3DK9FvwJR6a4kB_SW_Dbuskit-mEYqskkSsFLxN5DiG1OBzdHzYfW0zXWjxirQKyxJfdkg';
                     var yt = youtube ? '&ds=yt' : '';
-                    var url = '//suggestqueries.google.com/complete/search?hl=en&client=youtube&hjson=t&cp=1&q=' + encodeURIComponent(query) + '&key=' + apiKey + '&format=5&alt=json&callback=JSON_CALLBACK' + yt;
-                    $http.jsonp(url).then(function (obj) {
-                        $timeout.cancel(cancel);
-                        var results = $.map(obj.data[1], function (item) { return item[0]; });
+                    var url = '//suggestqueries.google.com/complete/search?hl=en&client=youtube&hjson=t&cp=1&q=' + encodeURIComponent(query) + '&key=' + apiKey + '&format=5&alt=json' + yt;
+                    jsonp(url).then(function (data) {
+                        var results = $.map(data[1], function (item) { return item[0]; });
                         if (results && results.length > 2) {
                             deferred.resolve(results);
                         }
@@ -30,10 +43,8 @@ var Minute;
                 var stockSearch = function (type, query, params) {
                     if (params === void 0) { params = ''; }
                     var deferred = $q.defer();
-                    var cancel = $timeout(function () { return deferred.resolve([]); }, 5000);
-                    $http.jsonp('//www.stockutils.com/' + type + '/' + encodeURIComponent(query) + '?callback=JSON_CALLBACK' + params).then(function (results) {
-                        $timeout.cancel(cancel);
-                        deferred.resolve(results.data);
+                    jsonp('//www.stockutils.com/' + type + '/' + encodeURIComponent(query) + '?' + params, 5000).then(function (data) {
+                        deferred.resolve(data);
                     });
                     return deferred.promise;
                 };
@@ -46,17 +57,15 @@ var Minute;
                 service.wikiSearch = function (query, len) {
                     if (len === void 0) { len = 0; }
                     var deferred = $q.defer();
-                    var cancel = $timeout(function () { return deferred.resolve(''); }, 5000);
                     var ucQuery = Minute.Utils.ucFirst(query);
-                    $http.jsonp('//en.wikipedia.org/w/api.php?format=json&action=query&prop=extracts&exintro=&explaintext=&titles=' + encodeURIComponent(ucQuery) + '&callback=JSON_CALLBACK').then(function (obj) {
-                        $timeout.cancel(cancel);
-                        for (var page in obj.data.query.pages) {
-                            if (obj.data.query.pages.hasOwnProperty(page)) {
-                                var text = obj.data.query.pages[page].extract;
+                    jsonp('//en.wikipedia.org/w/api.php?format=json&action=query&prop=extracts&exintro=&explaintext=&titles=' + encodeURIComponent(ucQuery), 5000).then(function (data) {
+                        for (var page in data.query.pages) {
+                            if (data.query.pages.hasOwnProperty(page)) {
+                                var text = data.query.pages[page].extract;
                                 if (text && !/^Report generated based on a request/.test(text)) {
                                     var output = '';
                                     if (len > 0) {
-                                        var sentences = text.split(/[\.?!](?=\s+[0-9A-Z])/g);
+                                        var sentences = text.split(/[.?!](?=\s+[0-9A-Z])/g);
                                         for (var i = 0; i < sentences.length; i++) {
                                             var sentence = $.trim(sentences[i].replace(/\s*\([^)]*\)\s*/g, " ").replace(/\s+/, ' '));
                                             if ((output.length === 0) || ((output.length + sentence.length) < len + 20)) {
@@ -129,15 +138,5 @@ var Minute;
     }());
     Minute.AngularSearch = AngularSearch;
     angular.module('AngularSearch', [])
-        .config(function ($sceDelegateProvider) {
-        $sceDelegateProvider.resourceUrlWhitelist([
-            // Allow same origin resource loads.
-            'self',
-            // Allow loading from our assets domain. **.
-            '//suggestqueries.google.com/!**',
-            '//www.stockutils.com//!**',
-            '//en.wikipedia.org/!**'
-        ]);
-    })
         .provider("$search", AngularSearch);
 })(Minute || (Minute = {}));

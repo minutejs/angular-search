@@ -6,21 +6,35 @@ module Minute {
             this.$get.$inject = ['$rootScope', '$q', '$timeout', '$http', '$sce'];
         }
 
-        $get = ($rootScope: ng.IRootScopeService, $q: ng.IQService, $timeout: ng.ITimeoutService, $http: ng.IHttpService, $sce: ng.ISCEService) => {
+        $get = ($rootScope: ng.IRootScopeService, $q: ng.IQService, $timeout: ng.ITimeoutService, $http: ng.IHttpService) => {
             let service: any = {};
-
-            let suggest = (query, youtube) => {
+            let jsonp = (url, timeout = 2500) => {
                 let deferred = $q.defer();
                 let cancel = $timeout(() => deferred.resolve([]), 2500);
 
+                $.ajax({
+                    url: url + (/\?/.test(url) ? '&' : '?') + 'callback=?',
+                    dataType: 'jsonp',
+                    success: (data) => {
+                        $timeout.cancel(cancel);
+                        $timeout(() => 1, 1);
+
+                        deferred.resolve(data);
+                    }
+                });
+
+                return deferred.promise;
+            };
+
+            let suggest = (query, youtube) => {
+                let deferred = $q.defer();
+
                 let apiKey = 'AI39si7ZLU83bKtKd4MrdzqcjTVI3DK9FvwJR6a4kB_SW_Dbuskit-mEYqskkSsFLxN5DiG1OBzdHzYfW0zXWjxirQKyxJfdkg';
                 let yt = youtube ? '&ds=yt' : '';
-                let url = '//suggestqueries.google.com/complete/search?hl=en&client=youtube&hjson=t&cp=1&q=' + encodeURIComponent(query) + '&key=' + apiKey + '&format=5&alt=json&callback=JSON_CALLBACK' + yt;
+                let url = '//suggestqueries.google.com/complete/search?hl=en&client=youtube&hjson=t&cp=1&q=' + encodeURIComponent(query) + '&key=' + apiKey + '&format=5&alt=json' + yt;
 
-                $http.jsonp(url).then((obj) => {
-                    $timeout.cancel(cancel);
-
-                    let results = $.map(obj.data[1], (item) => item[0]);
+                jsonp(url).then((data: any) => {
+                    let results = $.map(data[1], (item) => item[0]);
 
                     if (results && results.length > 2) {
                         deferred.resolve(results);
@@ -37,11 +51,9 @@ module Minute {
 
             let stockSearch = (type, query, params = '') => {
                 let deferred = $q.defer();
-                let cancel = $timeout(() => deferred.resolve([]), 5000);
 
-                $http.jsonp('//www.stockutils.com/' + type + '/' + encodeURIComponent(query) + '?callback=JSON_CALLBACK' + params).then((results) => {
-                    $timeout.cancel(cancel);
-                    deferred.resolve(results.data);
+                jsonp('//www.stockutils.com/' + type + '/' + encodeURIComponent(query) + '?' + params, 5000).then((data: any) => {
+                    deferred.resolve(data);
                 });
 
                 return deferred.promise;
@@ -57,21 +69,18 @@ module Minute {
 
             service.wikiSearch = (query, len = 0) => {
                 let deferred = $q.defer();
-                let cancel = $timeout(() => deferred.resolve(''), 5000);
                 let ucQuery = Minute.Utils.ucFirst(query);
 
-                $http.jsonp('//en.wikipedia.org/w/api.php?format=json&action=query&prop=extracts&exintro=&explaintext=&titles=' + encodeURIComponent(ucQuery) + '&callback=JSON_CALLBACK').then((obj: any) => {
-                    $timeout.cancel(cancel);
-
-                    for (let page in obj.data.query.pages) {
-                        if (obj.data.query.pages.hasOwnProperty(page)) {
-                            let text = obj.data.query.pages[page].extract;
+                jsonp('//en.wikipedia.org/w/api.php?format=json&action=query&prop=extracts&exintro=&explaintext=&titles=' + encodeURIComponent(ucQuery), 5000).then((data: any) => {
+                    for (let page in data.query.pages) {
+                        if (data.query.pages.hasOwnProperty(page)) {
+                            let text = data.query.pages[page].extract;
 
                             if (text && !/^Report generated based on a request/.test(text)) {
                                 let output = '';
 
                                 if (len > 0) {
-                                    let sentences = text.split(/[\.?!](?=\s+[0-9A-Z])/g);
+                                    let sentences = text.split(/[.?!](?=\s+[0-9A-Z])/g);
 
                                     for (let i = 0; i < sentences.length; i++) {
                                         let sentence = $.trim(sentences[i].replace(/\s*\([^)]*\)\s*/g, " ").replace(/\s+/, ' '));
@@ -150,15 +159,5 @@ module Minute {
     }
 
     angular.module('AngularSearch', [])
-        .config(function ($sceDelegateProvider) {
-            $sceDelegateProvider.resourceUrlWhitelist([
-                // Allow same origin resource loads.
-                'self',
-                // Allow loading from our assets domain. **.
-                '//suggestqueries.google.com/!**',
-                '//www.stockutils.com//!**',
-                '//en.wikipedia.org/!**'
-            ])
-        })
         .provider("$search", AngularSearch);
 }
