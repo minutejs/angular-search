@@ -112,7 +112,7 @@ var Minute;
                             results.push({
                                 src: 'http://www.youtube.com/watch?v=' + result.id.videoId,
                                 title: result.snippet.title,
-                                thumbnail: result.snippet.thumbnails.default.url,
+                                thumbnail: result.snippet.thumbnails["default"].url,
                                 description: result.snippet.description
                             });
                         });
